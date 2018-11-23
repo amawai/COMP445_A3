@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from urllib.parse import urlsplit
 import re
 import socket
-from udp.Window import Window
+import ipaddress
+from udp.UdpTransporter import UdpTransporter
 
 class UDPRequest(ABC):
     def __init__(self, url, port, write_file, headers=[], verbose=False):
@@ -30,11 +31,6 @@ class UDPRequest(ABC):
         request = self.create_request(path, query, host)
 
         try:
-            #THE UDP STUFF
-            router_addr = "localhost"
-            router_port = 3000
-            # here is we might put the sliding window
-
             result = self.send_request(request)
             redirection = self.process_response(result)
             if (redirection):
@@ -46,24 +42,29 @@ class UDPRequest(ABC):
             self.connection.close()
 
     def send_request(self, request):
-        #here is where we'll send packets
-        self.connection.sendall(request.encode())
-        return self.connection.recv(10000)
+        udp = UdpTransporter()
+        #TODO: udp.send(request) doesn't actually send a response
+        response = udp.send(request)
+        
+        return response
+    
 
     def process_response(self, result):
         response = ""
-        while (len(result) > 0):
-            response += result.decode("utf-8")
-            result = self.connection.recv(10000)
-        status_code = re.findall(r"(?<=HTTP\/\d\.\d )(\d\d\d)", response)
-        if (len(status_code) >= 1):
-            status_code = int(status_code[0])
-        if (status_code == 302):
-            self.redirect(response)
-            return True
-        else:
-            self.display_response(response)
-            return False
+        #TODO: Uncomment once udp.send() returns a response
+        # while (len(result) > 0):
+        #     response += result.decode("utf-8")
+        #     #result = self.connection.recv(10000)
+        # status_code = re.findall(r"(?<=HTTP\/\d\.\d )(\d\d\d)", response)
+        # if (len(status_code) >= 1):
+        #     status_code = int(status_code[0])
+        # if (status_code == 302):
+        #     self.redirect(response)
+        #     return True
+        # else:
+        #     self.display_response(response)
+        #     return False
+        return False
 
     def redirect(self, response):
         location = re.findall(r"(?<=Location\: )(.*)", response)

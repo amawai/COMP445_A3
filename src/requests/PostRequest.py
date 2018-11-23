@@ -1,7 +1,7 @@
 import mimetypes
 from .UDPRequest import UDPRequest
 
-class PostRequest(Request):
+class PostRequest(UDPRequest):
     def __init__(self, url, port, data, file, write_file, headers=[], verbose=False):
         super().__init__(url, port, write_file, headers, verbose)
         self.data = data

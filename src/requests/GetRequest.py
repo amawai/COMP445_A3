@@ -1,6 +1,6 @@
 from .UDPRequest import UDPRequest
 
-class GetRequest(Request):
+class GetRequest(UDPRequest):
     def __init__(self, url, port, write_file, headers=[], verbose=False):
         super().__init__(url, port, write_file, headers, verbose)
 
