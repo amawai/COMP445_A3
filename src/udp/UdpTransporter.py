@@ -9,8 +9,8 @@ packet_types = PacketTypes()
 MAX_SEQUENCE_NUMBER = 10
 
 class UdpTransporter:
-    def __init__(self, router_addr="localhost", router_port=3000, peer_ip=ipaddress.ip_address(socket.gethostbyname('localhost')), peer_port=8007):
-        self.connection = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def __init__(self, connection=socket.socket(socket.AF_INET, socket.SOCK_DGRAM), router_addr="localhost", router_port=3000, peer_ip=ipaddress.ip_address(socket.gethostbyname('localhost')), peer_port=8007):
+        self.connection = connection
         self.router_addr = router_addr
         self.router_port = router_port
         self.peer_ip = peer_ip

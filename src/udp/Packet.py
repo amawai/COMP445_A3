@@ -3,7 +3,7 @@ import ipaddress
 MIN_LEN = 11
 MAX_LEN = 1024
 
-
+#TODO: Add in the packet length attribute so that we know when we're done sending 
 class Packet:
     """
     Packet represents a simulated UDP packet.
