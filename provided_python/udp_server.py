@@ -1,7 +1,8 @@
 import argparse
 import socket
+import random
 
-from packet import Packet
+from Packet import Packet
 
 def run_server(port):
     conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -15,17 +16,36 @@ def run_server(port):
     finally:
         conn.close()
 
+def handshake_receive(conn, data, sender):
+    try:
+        random_seq_num = random.randrange(0, 2**31)
+        p = Packet.from_bytes(data)
+        p.packet_type = 4
+        #The ack num
+        next_seq = int(p.seq_num + 1)
+        p.payload =  str(next_seq).encode("utf-8")
+        p.seq_num = random_seq_num
+
+        conn.sendto(p.to_bytes(), sender)
+
+    except Exception as e:
+        print("Error: ", e)
 
 def handle_client(conn, data, sender):
     try:
         p = Packet.from_bytes(data)
+        print(sender)
         print("Router: ", sender)
+
+        print("Router0: ", sender[0])
         print("Packet: ", p)
         print("Payload: ", p.payload.decode("utf-8"))
-        p.packet_type = 1
-        p.set_seq_num(p.seq_num)
-        
-        conn.sendto(p.to_bytes(), sender)
+        print("Packet seq: ", p.seq_num)
+        if (p.packet_type == 3):
+                handshake_receive(conn, data, sender)
+        else:
+                p.packet_type = 1
+                conn.sendto(p.to_bytes(), sender)
 
     except Exception as e:
         print("Error: ", e)
