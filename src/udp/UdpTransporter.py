@@ -19,6 +19,46 @@ class UdpTransporter:
         self.peer_ip = peer_ip
         self.peer_port = peer_port
         self.timeout = 20
+        self.handshake_sender()
+
+    def handshake_sender(self):
+        initial_seq_num = random.randrange(0, 2**31)
+        syn_packet = Packet(packet_type=packet_types.SYN,
+                   seq_num=initial_seq_num,
+                   peer_ip_addr=self.peer_ip,
+                   peer_port=self.peer_port,
+                   payload='')
+        received_syn_ack = False
+        while (not received_syn_ack):
+            self.send_packet(syn_packet)
+            try:
+                response, sender = self.connection.recvfrom(1024)
+                p = Packet.from_bytes(response)
+                if p.packet_type == packet_types.SYN_ACK:
+                    next_seq_num = int(p.seq_num) + 1
+                    ack_packet = Packet(packet_type=packet_types.ACK,
+                                seq_num=next_seq_num,
+                                peer_ip_addr=self.peer_ip,
+                                peer_port=self.peer_port,
+                                payload='')
+                    self.send_packet(ack_packet)
+                    received_syn_ack = True
+            except socket.timeout:
+                continue
+    
+    #This is called if SYN type packet is received 
+    def handshake_receive(self, data, sender):
+        p = Packet.from_bytes(data)
+        random_seq_num = random.randrange(0, 2**31)
+        ack_num = str(p.next_seq + 1).encode("utf-8")
+        p = Packet.from_bytes(data)
+        syn_ack_packet = Packet(packet_type=packet_types.SYN_ACK,
+                        seq_num=random_seq_num,
+                        peer_ip_addr=sender[0],
+                        peer_port=sender[1],
+                        payload=ack_num)
+        self.connection.sendto(p.to_bytes(), sender)
+    
 
     def send(self, data):
         packets = DataConverter.convert_data_to_packets(packet_types.DATA, self.peer_ip, self.peer_port, data, MAX_SEQUENCE_NUMBER)
