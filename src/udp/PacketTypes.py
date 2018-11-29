@@ -18,3 +18,7 @@ class PacketTypes:
     @property
     def SYN_ACK(self):
         return 4
+
+    @property
+    def FINAL_PACKET(self):
+        return 5
