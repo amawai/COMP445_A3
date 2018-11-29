@@ -13,7 +13,7 @@ class HttpfsServer:
         self.directory = directory
     
     def start(self):
-        listener = socket.socket(socket.AF_INET, socket.SOCK_GRAM)
+        listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             listener.bind(('', self.port))
             listener.listen(5)

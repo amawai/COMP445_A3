@@ -31,6 +31,7 @@ class UdpTransporter:
                 print("RECEIVED: ", p.payload.decode('utf-8'))
                 if p.packet_type == packet_types.ACK:
                     window.slide_window(p.seq_num)
+                    
                 #TODO: test the nak
                 elif p.packet_type == packet_types.NAK:
                     #resend the packet with the corresponding sequence number
@@ -45,6 +46,7 @@ class UdpTransporter:
     
     #TODO: Receive packets, store in buffer, send ACKs/NAKs accordingly
     def receive(self):
+    
         pass
 
     def send_packet(self, packet):
