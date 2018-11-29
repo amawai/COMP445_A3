@@ -54,7 +54,7 @@ class UdpTransporter:
         pass
 
     def send_packet(self, packet):
-        if packet not None:
+        if packet != None:
             self.connection.sendto(packet.to_bytes(), (self.router_addr, self.router_port))
             self.connection.settimeout(self.timeout)
 
