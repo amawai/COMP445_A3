@@ -20,9 +20,7 @@ class Window:
     #Returns finished frames
     def slide_window(self, ack_seq_num):
         print('received ACK', ack_seq_num)
-        if self.data_index == len(self.data):
-            self.complete = True
-        elif ack_seq_num in self.valid_sequence_nums():
+        if ack_seq_num in self.valid_sequence_nums():
             num_frames_to_slide = ((ack_seq_num - self.current_seq_start) % self.max_seq_num) + 1
             finished_frames = [num % self.max_seq_num for num in range(self.current_seq_start, self.current_seq_start + num_frames_to_slide)]
             next_current_seq = (self.current_seq_start + num_frames_to_slide) % self.max_seq_num 
@@ -30,8 +28,9 @@ class Window:
             self.current_seq_start = next_current_seq
             self.window = [packet for packet in self.data[self.data_index : new_data_index + 1]]
             self.data_index = new_data_index
-
             return finished_frames
+        if self.data_index == len(self.data):
+            self.complete = True
         return []
 
     def valid_sequence_nums(self):
