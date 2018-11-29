@@ -13,19 +13,21 @@ class HttpfsServer:
         self.directory = directory
     
     def start(self):
-        listener = socket.socket(socket.AF_INET, socket.SOCK_GRAM)
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             listener.bind(('', self.port))
             listener.listen(5)
             if (self.verbose):
                 print('httpfs server is listening at ', self.port)
             while True:
-                data, sender = listener.recvfrom(1024)
-                threading.Thread(target=self.handle_client, args=(listener, data, sender)).start()
+                conn, addr = listener.accept()
+                threading.Thread(target=self.handle_client, args=(conn, addr)).start()
+                #data, sender = listener.recvfrom(1024)
+                #threading.Thread(target=self.handle_client, args=(listener, data, sender)).start()
         finally:
             listener.close()
     
-    def handle_client(self, conn, data, sender):
+    def handle_client(self, conn, addr):
         #receive request, use sliding window
         request = conn.recv(1024).decode("utf-8")
         if (self.verbose):
@@ -47,7 +49,5 @@ class HttpfsServer:
             if (self.verbose):
                 print(http_response)
             
-            udpTransporter = UdpTransporter(conn)
-            udpTransporter.send(response)
-            #conn.sendall(http_response.encode())
-            #conn.close()
+            udpTransporter = UdpTransporter()
+            udpTransporter.send(http_response)
