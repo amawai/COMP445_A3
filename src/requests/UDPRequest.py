@@ -43,9 +43,9 @@ class UDPRequest(ABC):
 
     def send_request(self, request):
         udp = UdpTransporter()
+        udp.init_handshake()
         #TODO: udp.send(request) doesn't actually send a response
         response = udp.send(request)
-        
         return response
     
 

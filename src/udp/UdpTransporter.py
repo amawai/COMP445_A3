@@ -12,16 +12,15 @@ packet_types = PacketTypes()
 MAX_SEQUENCE_NUMBER = 10
 
 class UdpTransporter:
-    def __init__(self, connection=socket.socket(socket.AF_INET, socket.SOCK_DGRAM), router_addr="localhost", router_port=3000, peer_ip=ipaddress.ip_address(socket.gethostbyname('localhost')), peer_port=8007):
+    def __init__(self, connection=socket.socket(socket.AF_INET, socket.SOCK_DGRAM), router_addr="localhost", router_port=3000, peer_ip=ipaddress.ip_address(socket.gethostbyname('localhost')), peer_port=8008):
         self.connection = connection
         self.router_addr = router_addr
         self.router_port = router_port
         self.peer_ip = peer_ip
         self.peer_port = peer_port
         self.timeout = 20
-        self.handshake_sender()
 
-    def handshake_sender(self):
+    def init_handshake(self):
         initial_seq_num = random.randrange(0, 2**31)
         syn_packet = Packet(packet_type=packet_types.SYN,
                    seq_num=initial_seq_num,
@@ -30,8 +29,8 @@ class UdpTransporter:
                    payload='')
         received_syn_ack = False
         while (not received_syn_ack):
-            self.send_packet(syn_packet)
             try:
+                self.send_packet(syn_packet)
                 response, sender = self.connection.recvfrom(1024)
                 p = Packet.from_bytes(response)
                 if p.packet_type == packet_types.SYN_ACK:
@@ -45,20 +44,17 @@ class UdpTransporter:
                     received_syn_ack = True
             except socket.timeout:
                 continue
-    
-    #This is called if SYN type packet is received 
-    def handshake_receive(self, data, sender):
-        p = Packet.from_bytes(data)
+
+    #This is called if SYN type packet is received
+    def handshake_receive(self, packet, sender):
         random_seq_num = random.randrange(0, 2**31)
-        ack_num = str(p.next_seq + 1).encode("utf-8")
-        p = Packet.from_bytes(data)
+        ack_num = str(packet.seq_num + 1).encode("utf-8")
         syn_ack_packet = Packet(packet_type=packet_types.SYN_ACK,
                         seq_num=random_seq_num,
-                        peer_ip_addr=sender[0],
-                        peer_port=sender[1],
+                        peer_ip_addr=packet.peer_ip_addr,
+                        peer_port=packet.peer_port,
                         payload=ack_num)
-        self.connection.sendto(p.to_bytes(), sender)
-    
+        self.connection.sendto(syn_ack_packet.to_bytes(), sender)
 
     def send(self, data):
         packets = DataConverter.convert_data_to_packets(packet_types.DATA, self.peer_ip, self.peer_port, data, MAX_SEQUENCE_NUMBER)
