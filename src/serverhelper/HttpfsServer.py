@@ -1,8 +1,9 @@
-mport socket
+import socket
 import threading
 from .RequestHandler import RequestHandler
 from .ResponseCreator import ResponseCreator
 from udp.UdpTransporter import UdpTransporter
+from udp.UdpReceiver import UdpReceiver
 import datetime
 
 REQUEST_TYPE = 0
@@ -13,7 +14,7 @@ class HttpfsServer:
         self.directory = directory
     
     def start(self):
-        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             listener.bind(('', self.port))
             listener.listen(5)
@@ -28,8 +29,12 @@ class HttpfsServer:
             listener.close()
     
     def handle_client(self, conn, addr):
+        
         #receive request, use sliding window
         request = conn.recv(1024).decode("utf-8")
+        udpReceiver = UdpReceiver()
+        udpReceiver.receive(request)
+        #------
         if (self.verbose):
             print(request)
         request_array = request[0:request.index('\r\n\r\n')].split()
