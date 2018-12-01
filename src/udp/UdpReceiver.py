@@ -19,15 +19,16 @@ class UdpReceiver:
         self.timeout = 20
         self.buffer = []
         self.pointer = 0
-        self.ack_timer
+        self.ack_timer = None
 
     #TODO: Receive packets, store in buffer, send ACKs/NAKs accordingly
     def receive(self, packet, sender):
-        packet_type = 'NAK'
+        packet_type = packet_types.NAK
         packet_int =0
         index = 0
         if not self.buffer: 
             self.ack_timer = AckTimer(self.timeout,self.sendPacket,(packet_type,packet_int))
+            self.ack_timer = AckTimer(self.timeout,self.sendPacket,packet_type,packet_int, sender)
     
         #insert packet in the buffer if it doesn't exist
         self.insertPacket(packet)
@@ -36,7 +37,7 @@ class UdpReceiver:
         for index in range(len(self.buffer)):
             if not self.buffer[index]:  # if packet doesnot exist in the buffer
                 if packet_int == index-1:
-                    packet_type = 'NAK'
+                    packet_type = packet_types.NAK
                     break
                 packet_int =index
                 index +=1
@@ -44,7 +45,7 @@ class UdpReceiver:
                 index +=1
 
         if index == len(self.buffer):
-            packet_type = 'ACK'
+            packet_type = packet_types.ACK
             packet_int =index -1
 
         #check if the last packet is here
@@ -66,7 +67,8 @@ class UdpReceiver:
         elif packet_type == PacketTypes.NAK:
             self.pointer = packet_int-1
         
-    def sendPacket(self, p_type,p_number,sender):     
+    def sendPacket(self, p_type,p_number,sender):   
+        print("Time out, send", p_type, p_number)  
         receive_packet = Packet(packet_type= p_type,
             seq_num=p_number,
             peer_ip_addr=self.peers_ip,
@@ -74,7 +76,7 @@ class UdpReceiver:
             payload="")
         self.connection.sendto(receive_packet.to_bytes(), sender)
         self.slidePointer(p_type,p_number)
-        self.resetTimer(self.ack_timer,p_number,p_type)
+        self.resetTimer(self.ack_timer,p_number,p_type,sender)
 
     def insertPacket(self, packet):
         insert_seq_num = packet.seq_num
@@ -88,5 +90,5 @@ class UdpReceiver:
     def stopTimer(self,ack_timer):
         ack_timer.stop()
         
-    def resetTimer(self,ack_timer,packet_type,packet_int):
-        ack_timer = AckTimer(self.timeout,self.sendPacket,(packet_type,packet_int))
+    def resetTimer(self,ack_timer,packet_type,packet_int,sender):
+        ack_timer = AckTimer(self.timeout,self.sendPacket,(packet_type,packet_int,sender))

@@ -40,8 +40,8 @@ class HttpfsServer:
             udpTransporter.handshake_receive(p, sender)
             self.clients[peer] = udpTransporter
 
-        elif p.packet_type in [packet_types.DATA]:
-            udpReceiver = self.clients[peer]
+        elif p.packet_type in [packet_types.DATA, packet_types.FINAL_PACKET]:
+            udpReceiver = UdpReceiver()
             request = udpReceiver.receive(p,sender)
             if (self.verbose):
                 print(request)
