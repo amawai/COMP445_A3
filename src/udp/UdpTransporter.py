@@ -23,7 +23,7 @@ class UdpTransporter:
     def send(self, data):
         packets = DataConverter.convert_data_to_packets(packet_types.DATA, self.peer_ip, self.peer_port, data, MAX_SEQUENCE_NUMBER)
         print(packets)
-        window =    (packets, MAX_SEQUENCE_NUMBER)
+        window = window(packets, MAX_SEQUENCE_NUMBER)
         frame_timers = {}
         self.send_all_window_frames(window, frame_timers)
         while(not window.complete):
@@ -51,7 +51,7 @@ class UdpTransporter:
     
     #TODO: Receive packets, store in buffer, send ACKs/NAKs accordingly
     def receive(self):
-        passf
+        pass
 
     def send_packet(self, packet):
         if packet != None:
