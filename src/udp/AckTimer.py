@@ -1,11 +1,9 @@
 from threading import Timer
 
 class AckTimer(object):
-    
-
     def __init__(self, interval, function, *args, **kwargs):
         self._timer     = None
-        self.interval   = 0.05
+        self.interval   = 10
         self.function   = function
         self.args       = args
         self.kwargs     = kwargs
@@ -15,7 +13,7 @@ class AckTimer(object):
     def _run(self):
         self.is_running = False
         self.start()
-        self.function(*self.args)
+        self.function(self.args[0], self.args[1], self.args[2])
 
     def start(self):
         if not self.is_running:

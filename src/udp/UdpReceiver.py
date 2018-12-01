@@ -10,7 +10,7 @@ packet_types = PacketTypes()
 MAX_SEQUENCE_NUMBER = 10
 
 class UdpReceiver:
-    def __init__(self, connection=socket.socket(socket.AF_INET, socket.SOCK_DGRAM), router_addr="localhost", router_port=3000, peer_ip=ipaddress.ip_address(socket.gethostbyname('localhost')), peer_port=41830):
+    def __init__(self, connection=socket.socket(socket.AF_INET, socket.SOCK_DGRAM), router_addr="localhost", router_port=3000, peer_ip=ipaddress.ip_address(socket.gethostbyname('localhost')), peer_port=8008):
         self.connection = connection
         self.router_addr = router_addr
         self.router_port = router_port
@@ -19,15 +19,15 @@ class UdpReceiver:
         self.timeout = 20
         self.buffer = []
         self.pointer = 0
-        self.ack_timer
+        self.ack_timer = None
 
     #TODO: Receive packets, store in buffer, send ACKs/NAKs accordingly
     def receive(self, packet, sender):
-        packet_type = 'NAK'
+        packet_type = packet_types.NAK
         packet_int =0
         index = 0
         if not self.buffer: 
-            self.ack_timer = AckTimer(self.timeout,self.sendPacket,(packet_type,packet_int))
+            self.ack_timer = AckTimer(self.timeout, self.sendPacket, packet_type, packet_int, sender)
     
         #insert packet in the buffer if it doesn't exist
         self.insertPacket(packet)
@@ -36,7 +36,7 @@ class UdpReceiver:
         for index in range(len(self.buffer)):
             if not self.buffer[index]:  # if packet doesnot exist in the buffer
                 if packet_int == index-1:
-                    packet_type = 'NAK'
+                    packet_type = packet_types.NAK
                     break
                 packet_int =index
                 index +=1
@@ -44,7 +44,7 @@ class UdpReceiver:
                 index +=1
 
         if index == len(self.buffer):
-            packet_type = 'ACK'
+            packet_type = packet_types.ACK
             packet_int =index -1
 
         #check if the last packet is here
