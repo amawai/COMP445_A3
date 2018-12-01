@@ -5,6 +5,7 @@ from .ResponseCreator import ResponseCreator
 from udp.PacketTypes import PacketTypes
 from udp.Packet import Packet
 from udp.UdpTransporter import UdpTransporter
+from udp.UdpReceiver import UdpReceiver
 import datetime
 
 REQUEST_TYPE = 0
@@ -18,18 +19,18 @@ class HttpfsServer:
         self.clients = {}
     
     def start(self):
-        listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            listener.bind(('', self.port))
+            conn.bind(('', self.port))
             if (self.verbose):
                 print('httpfs server is listening at ', self.port)
             while True:
-                data, sender = listener.recvfrom(1024)
-                self.handle_client(listener, data, sender)
+                data, sender = conn.recvfrom(1024)
+                self.handle_client(conn, data, sender)
                 #TODO: Multi clients
                 #threading.Thread(target=self.handle_client, args=(listener, data, sender)).start()
         finally:
-            listener.close()
+            conn.close()
     
     def handle_client(self, conn, data, sender):
         p = Packet.from_bytes(data)
@@ -40,8 +41,8 @@ class HttpfsServer:
             self.clients[peer] = udpTransporter
 
         elif p.packet_type in [packet_types.DATA]:
-            udpTransporter = self.clients[peer]
-            request = udpTransporter.receive()
+            udpReceiver = self.clients[peer]
+            request = udpReceiver.receive(p,sender)
             if (self.verbose):
                 print(request)
             request_array = request[0:request.index('\r\n\r\n')].split()
