@@ -7,7 +7,7 @@ from udp.UdpTransporter import UdpTransporter
 from udp.RecWindow import RecWindow
 
 class UDPRequest(ABC):
-    def __init__(self, url, port, write_file, headers=[], verbose=False):
+    def __init__(self, url, port, write_file, router_port, router_host, headers=[], verbose=False):
         self.url = url
         self.port = port
         self.headers = headers
@@ -15,6 +15,8 @@ class UDPRequest(ABC):
         self.connection = None
         self.write_file = write_file
         self.timeout = 1
+        self.router_port = router_port
+        self.router_host = router_host
 
     @abstractmethod
     def create_request(self, path, query, host):
