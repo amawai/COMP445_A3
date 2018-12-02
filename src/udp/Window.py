@@ -13,13 +13,13 @@ class Window:
 
     def get_window_data(self, seq_num):
         if seq_num in self.valid_sequence_nums():
-            converted_index = (self.current_seq_start - seq_num) % self.window_size
-            return self.window[converted_index]
+            for packet in self.window:
+                if packet.seq_num == seq_num:
+                    return packet
         return None
 
     #Returns finished frames
     def slide_window(self, ack_seq_num):
-        print('received ACK', ack_seq_num)
         if ack_seq_num in self.valid_sequence_nums():
             num_frames_to_slide = ((ack_seq_num - self.current_seq_start) % self.max_seq_num) + 1
             finished_frames = [num % self.max_seq_num for num in range(self.current_seq_start, self.current_seq_start + num_frames_to_slide)]

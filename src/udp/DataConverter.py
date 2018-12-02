@@ -15,9 +15,9 @@ class DataConverter:
                    peer_port=peer_port,
                    payload=payload.encode("utf-8"))
             packets.append(packet)
-        packets[-1].packet_type = PacketTypes().FINAL_PACKET
+        packets[-1].packet_type = PacketTypes().FINAL_SEND_PACKET
         return packets
 
     @staticmethod
     def separate_payload(payload):
-        return [payload[i:min(len(payload) - 1, i+MAX_PAYLOAD_SIZE)] for i in range(0, len(payload.encode()), MAX_PAYLOAD_SIZE)] 
+        return [payload[i:min(len(payload), i+MAX_PAYLOAD_SIZE)] for i in range(0, len(payload.encode()), MAX_PAYLOAD_SIZE)] 

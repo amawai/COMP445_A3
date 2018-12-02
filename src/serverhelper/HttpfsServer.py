@@ -5,6 +5,7 @@ from .ResponseCreator import ResponseCreator
 from udp.PacketTypes import PacketTypes
 from udp.Packet import Packet
 from udp.UdpTransporter import UdpTransporter
+from udp.RecWindow import RecWindow
 import datetime
 
 REQUEST_TYPE = 0
@@ -16,6 +17,7 @@ class HttpfsServer:
         self.port = port
         self.directory = directory
         self.clients = {}
+        self.timeout = 2
     
     def start(self):
         listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -24,10 +26,13 @@ class HttpfsServer:
             if (self.verbose):
                 print('httpfs server is listening at ', self.port)
             while True:
-                data, sender = listener.recvfrom(1024)
-                self.handle_client(listener, data, sender)
-                #TODO: Multi clients
-                #threading.Thread(target=self.handle_client, args=(listener, data, sender)).start()
+                try:
+                    data, sender = listener.recvfrom(1024)
+
+                    threading.Thread(target=self.handle_client, args=(listener, data, sender)).start()
+                    #self.handle_client(listener, data, sender)
+                except socket.timeout:
+                    continue
         finally:
             listener.close()
     
@@ -35,13 +40,16 @@ class HttpfsServer:
         p = Packet.from_bytes(data)
         peer ="%s:%s" % (p.peer_ip_addr, p.peer_port)
         if (p.packet_type == packet_types.SYN):
-            udpTransporter = UdpTransporter(conn)
+            udpTransporter = UdpTransporter(self.timeout, conn, 'localhost', 3000, p.peer_ip_addr, p.peer_port)
             udpTransporter.handshake_receive(p, sender)
             self.clients[peer] = udpTransporter
-
-        elif p.packet_type in [packet_types.DATA]:
-            udpTransporter = self.clients[peer]
-            request = udpTransporter.receive()
+        elif p.packet_type in [packet_types.DATA, packet_types.FINAL_SEND_PACKET]:
+            udpTransporter = None
+            if peer in self.clients:
+                udpTransporter = self.clients[peer]
+            else:
+                udpTransporter = UdpTransporter(conn, 'localhost', 3000, p.peer_ip_addr, p.peer_port)
+            request = udpTransporter.receive_response()
             if (self.verbose):
                 print(request)
             request_array = request[0:request.index('\r\n\r\n')].split()
@@ -60,4 +68,10 @@ class HttpfsServer:
                 http_response = ResponseCreator.create_response(response['status'], response['content'], response['mimetype'])
                 if (self.verbose):
                     print(http_response)
-                udpTransporter.send(http_response)
+                sent_success = udpTransporter.send(http_response)
+                if sent_success:
+                    print('Successfully sent request!')
+                else:
+                    print('Communication lost.')
+                    #This removes the connection so that we don't try to use it again
+                    self.clients.pop(peer)
