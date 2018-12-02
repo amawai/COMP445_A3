@@ -25,6 +25,7 @@ class HttpfsServer:
             if (self.verbose):
                 print('httpfs server is listening at ', self.port)
             while True:
+                print ('handle client')
                 data, sender = conn.recvfrom(1024)
                 self.handle_client(conn, data, sender)
                 #TODO: Multi clients
@@ -33,16 +34,20 @@ class HttpfsServer:
             conn.close()
     
     def handle_client(self, conn, data, sender):
+        print ('debug')
         p = Packet.from_bytes(data)
         peer ="%s:%s" % (p.peer_ip_addr, p.peer_port)
+        print ('handle client')
         if (p.packet_type == packet_types.SYN):
             udpTransporter = UdpTransporter(conn)
             udpTransporter.handshake_receive(p, sender)
             self.clients[peer] = udpTransporter
 
         elif p.packet_type in [packet_types.DATA, packet_types.FINAL_PACKET]:
-            udpReceiver = UdpReceiver()
-            request = udpReceiver.receive(p,sender)
+
+            udpReceiver = UdpReceiver()#self.clients[peer]
+            request = udpReceiver.receive(p, sender)
+            print (request)
             if (self.verbose):
                 print(request)
             request_array = request[0:request.index('\r\n\r\n')].split()

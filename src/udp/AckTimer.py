@@ -28,3 +28,29 @@ class AckTimer(object):
             print("stopping the timer for ", self.args)
             self._timer.cancel()
             self.is_running = False
+
+# import time
+# def __init__(self,interval):
+#     self._timer     = None
+#     self.interval   = interval
+#     self.is_running = False
+
+# def start(self):
+#     self.is_running = True
+#     countdown(self.interval)
+# def stop(self):
+#    self.is_running = False
+   
+
+    
+# def reset(self):
+#     self.start()
+
+# def countdown(slef,interval):
+#     while interval:
+#         mins, secs = divmod(interval, 60)
+#         timeformat = '{:02d}:{:02d}'.format(mins, secs)
+#         print(timeformat, end='\r')
+#         time.sleep(1)
+#         interval -= 1
+#     print('Time out\n\n\n\n\n')
