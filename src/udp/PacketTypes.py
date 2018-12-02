@@ -20,9 +20,13 @@ class PacketTypes:
         return 4
 
     @property
-    def FINAL_PACKET(self):
+    def FINAL_REC_PACKET(self):
         return 5
     
+    @property
+    def FINAL_SEND_PACKET(self):
+        return 6
+
     @staticmethod
     def get_packet_name(packet_type):
         if packet_type == 0:
@@ -36,6 +40,8 @@ class PacketTypes:
         elif packet_type == 4:
             return "SYN_ACK"
         elif packet_type == 5:
-            return "FINAL_PACKET"
+            return "FINAL_REC_PACKET"
+        elif packet_type == 6:
+            return "FINAL_SEND_PACKET"
         else:
             return "UNKNOWN LOL"
