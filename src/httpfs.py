@@ -13,7 +13,7 @@ class httpfs(object):
         parser.add_argument("-rp","--routerPort", help="Port number of Router", default=3000, type=int)
         parser.add_argument("-rh","--routerHost", help="Host of router",default='localhost')
         args = parser.parse_args(sys.argv[1:])
-        server = HttpfsServer(args.verbose, args.port, args.directory)
+        server = HttpfsServer(args.verbose, args.port, args.directory, args.routerPort, args.routerHost)
         server.start()
         if not hasattr(self, args.command):
             print ('Unrecognized command')
