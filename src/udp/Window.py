@@ -20,7 +20,6 @@ class Window:
 
     #Returns finished frames
     def slide_window(self, ack_seq_num):
-        print('received ACK', ack_seq_num)
         if ack_seq_num in self.valid_sequence_nums():
             num_frames_to_slide = ((ack_seq_num - self.current_seq_start) % self.max_seq_num) + 1
             finished_frames = [num % self.max_seq_num for num in range(self.current_seq_start, self.current_seq_start + num_frames_to_slide)]

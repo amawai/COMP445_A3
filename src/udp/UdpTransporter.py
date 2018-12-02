@@ -10,7 +10,7 @@ from .FrameTimer import FrameTimer
 
 packet_types = PacketTypes()
 MAX_SEQUENCE_NUMBER = 10
-
+ 
 class UdpTransporter:
     def __init__(self, connection=socket.socket(socket.AF_INET, socket.SOCK_DGRAM), router_addr="localhost", router_port=3000, peer_ip=ipaddress.ip_address(socket.gethostbyname('localhost')), peer_port=8008):
         self.connection = connection
@@ -18,7 +18,7 @@ class UdpTransporter:
         self.router_port = router_port
         self.peer_ip = peer_ip
         self.peer_port = peer_port
-        self.timeout = 20
+        self.timeout = 10
 
     def init_handshake(self):
         initial_seq_num = random.randrange(0, 2**31)
@@ -66,7 +66,7 @@ class UdpTransporter:
             try:
                 response, sender = self.connection.recvfrom(1024)
                 p = Packet.from_bytes(response)
-                print('received packet with seq num ', p.seq_num)
+                print('RECEIVED ' + packet_types.get_packet_name(p.packet_type) + str(p.seq_num))
                 if p.packet_type == packet_types.ACK:
                     completed_frames = window.slide_window(p.seq_num)
                     print('THESE WERE COMPLETED')
@@ -78,7 +78,8 @@ class UdpTransporter:
                     self.send_packet(window.get_window_data(p.seq_num))
                     self.reset_timer(frame_timers, p)
                 elif p.packet_type == packet_types.FINAL_PACKET:
-                    window.complete = False
+                    window.complete = True
+                    print("All packets sent successfully")
                     break;
             except socket.timeout:
                 print("Timeout, resending...")
@@ -90,32 +91,37 @@ class UdpTransporter:
 
     def send_packet(self, packet):
         if packet != None:
+            print('SENDING packet#', packet.seq_num)
             self.connection.sendto(packet.to_bytes(), (self.router_addr, self.router_port))
             self.connection.settimeout(self.timeout)
 
     def send_all_window_frames(self, window, frame_timers):
         for p in window.get_all_window_data():
             if p is not None:
-                print("SENDING: #", p.seq_num)
                 seq_num = p.seq_num
-                if p.seq_num in frame_timers:
-                    frame_timers[seq_num].stop()
-                frame_timers[seq_num] = FrameTimer(self.timeout, self.send_packet, p)
+                #if p.seq_num in frame_timers:
+                #    frame_timers[seq_num].stop()
+                frame_timers[seq_num] = {"packet": p, "acknowledged": False}
+                frame_timers[seq_num]['timer'] = FrameTimer(self.timeout, self.send_packet, frame_timers[seq_num])
                 self.send_packet(p)
 
     def stop_all_timers(self, frame_timers):
-        for timer in frame_timers.values():
-            timer.stop()
+        print('stopping all timers')
+        for frame in frame_timers.values():
+           frame['acknowledged'] = True
+        print(frame_timers)
 
     def stop_timer(self, frame_timers, frames):
         for frame in frames:
             if frame in frame_timers:
-                frame_timers[frame].stop()
+                frame_timers[frame]['acknowledged'] = True
 
     def reset_timer(self, frame_timers, packet):
         if packet in frame_timers:
-            frame_timers[packet].stop()
-        frame_timers[packet.seq_num] = FrameTimer(self.timeout, self.send_packet, packet)
+            #frame_timers[packet].stop()
+            pass
+            #frame_timers[packet] = True
+        #frame_timers[packet.seq_num] = FrameTimer(self.timeout, self.send_packet, packet)
     
 
     def close_connection():
