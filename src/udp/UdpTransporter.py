@@ -1,6 +1,7 @@
 import socket
 import ipaddress
 import random
+import sys
 from threading import Timer
 from .Window import Window
 from .Packet import Packet
@@ -29,6 +30,7 @@ class UdpTransporter:
                    peer_port=self.peer_port,
                    payload='')
         received_syn_ack = False
+        keep_alive_num=3
         while (not received_syn_ack):
             try:
                 self.send_packet(syn_packet)
@@ -44,7 +46,12 @@ class UdpTransporter:
                     self.send_packet(ack_packet)
                     received_syn_ack = True
             except socket.timeout:
-                continue
+                keep_alive_num-=1
+                print("Timeout, resending...")
+                if self.keep_alive_counter(keep_alive_num) is False:
+                    sys.exit()
+                else:
+                    continue
 
     #This is called if SYN type packet is received
     def handshake_receive(self, packet, sender):
@@ -63,6 +70,7 @@ class UdpTransporter:
         window = Window(packets, MAX_SEQUENCE_NUMBER)
         frame_timers = {}
         self.send_all_window_frames(window, frame_timers)
+        keep_alive_num=3
         while(not window.complete):
             try:
                 response, sender = self.connection.recvfrom(1024)
@@ -86,14 +94,19 @@ class UdpTransporter:
                     print("All packets sent successfully")
                     break;
             except socket.timeout:
+                keep_alive_num-=1
                 print("Timeout, resending...")
                 self.send_all_window_frames(window, frame_timers)
-                continue
+                if self.keep_alive_counter(keep_alive_num) is False:
+                    sys.exit()
+                else:
+                    continue
         self.stop_all_timers = True
         return True
 
     def receive_response(self):
         rec_window = RecWindow()
+        keep_alive_num=3
         while not rec_window.buffer_ready_for_extraction():
             try:
                 response, sender = self.connection.recvfrom(1024)
@@ -110,7 +123,12 @@ class UdpTransporter:
                     self.send_packet(packet_to_send)
                     print('Sent ' + packet_types.get_packet_name(packet_type) + str(seq_num))
             except socket.timeout:
-                continue
+                keep_alive_num-=1
+                print("Timeout, resending...")
+                if self.keep_alive_counter(keep_alive_num) is False:
+                    sys.exit()
+                else:
+                    continue
         return rec_window.extract_buffer()
 
     def send_packet(self, packet):
@@ -144,3 +162,8 @@ class UdpTransporter:
     
     def create_timer_for_packet(self, frame_info):
         Timer(self.timeout, self.manage_timer, frame_info).start()
+    
+    def keep_alive_counter(self,keep_live_num):
+        if keep_live_num == 0:
+            print("No response from server after 3 tries. Quiting...")
+            return False
