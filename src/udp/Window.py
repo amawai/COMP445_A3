@@ -13,8 +13,9 @@ class Window:
 
     def get_window_data(self, seq_num):
         if seq_num in self.valid_sequence_nums():
-            converted_index = (self.current_seq_start - seq_num) % self.window_size
-            return self.window[converted_index]
+            for packet in self.window:
+                if packet.seq_num == seq_num:
+                    return packet
         return None
 
     #Returns finished frames
