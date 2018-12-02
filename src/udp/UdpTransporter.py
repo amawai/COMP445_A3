@@ -6,7 +6,6 @@ from .Window import Window
 from .Packet import Packet
 from .DataConverter import DataConverter
 from .PacketTypes import PacketTypes
-from .FrameTimer import FrameTimer
 
 packet_types = PacketTypes()
 MAX_SEQUENCE_NUMBER = 10
@@ -19,6 +18,7 @@ class UdpTransporter:
         self.peer_ip = peer_ip
         self.peer_port = peer_port
         self.timeout = 10
+        self.stop_all_timers = False
 
     def init_handshake(self):
         initial_seq_num = random.randrange(0, 2**31)
@@ -57,6 +57,7 @@ class UdpTransporter:
         self.connection.sendto(syn_ack_packet.to_bytes(), sender)
 
     def send(self, data):
+        self.complete_sending = False
         packets = DataConverter.convert_data_to_packets(packet_types.DATA, self.peer_ip, self.peer_port, data, MAX_SEQUENCE_NUMBER)
         print(packets)
         window = Window(packets, MAX_SEQUENCE_NUMBER)
@@ -74,9 +75,12 @@ class UdpTransporter:
                     self.stop_timer(frame_timers, completed_frames)
                     self.send_all_window_frames(window, frame_timers)
                 elif p.packet_type == packet_types.NAK:
+                    completed_frames = window.slide_window((p.seq_num - 1) % MAX_SEQUENCE_NUMBER)
+                    self.stop_timer(frame_timers, completed_frames)
                     #resend the packet with the corresponding sequence number
                     self.send_packet(window.get_window_data(p.seq_num))
-                    self.reset_timer(frame_timers, p)
+                    if p.seq_num in frame_timers:
+                        self.create_timer_for_packet([frame_timers[p.seq_num]])
                 elif p.packet_type == packet_types.FINAL_PACKET:
                     window.complete = True
                     print("All packets sent successfully")
@@ -85,8 +89,7 @@ class UdpTransporter:
                 print("Timeout, resending...")
                 self.send_all_window_frames(window, frame_timers)
                 continue
-        self.stop_all_timers(frame_timers)
-        #TODO: Actual return, we simply return true for now
+        self.stop_all_timers = True
         return True
 
     def send_packet(self, packet):
@@ -99,33 +102,27 @@ class UdpTransporter:
         for p in window.get_all_window_data():
             if p is not None:
                 seq_num = p.seq_num
-                #if p.seq_num in frame_timers:
-                #    frame_timers[seq_num].stop()
                 frame_timers[seq_num] = {"packet": p, "acknowledged": False}
-                frame_timers[seq_num]['timer'] = FrameTimer(self.timeout, self.send_packet, frame_timers[seq_num])
+                print('create timer for ', seq_num)
+                self.create_timer_for_packet([frame_timers[seq_num]])
                 self.send_packet(p)
-
-    def stop_all_timers(self, frame_timers):
-        print('stopping all timers')
-        for frame in frame_timers.values():
-           frame['acknowledged'] = True
-        print(frame_timers)
 
     def stop_timer(self, frame_timers, frames):
         for frame in frames:
             if frame in frame_timers:
                 frame_timers[frame]['acknowledged'] = True
-
-    def reset_timer(self, frame_timers, packet):
-        if packet in frame_timers:
-            #frame_timers[packet].stop()
-            pass
-            #frame_timers[packet] = True
-        #frame_timers[packet.seq_num] = FrameTimer(self.timeout, self.send_packet, packet)
+                print('stopping frame ', frame)
     
+    def manage_timer(self, frame_info):
+        if not self.stop_all_timers:
+            packet = frame_info['packet']
+            acknowledged = frame_info['acknowledged']
+            if not acknowledged:
+                print(frame_info)
+                self.send_packet(packet)
+    
+    def create_timer_for_packet(self, frame_info):
+        Timer(self.timeout, self.manage_timer, frame_info).start()
 
     def close_connection():
         self.connection.close()
-    
-
-    
