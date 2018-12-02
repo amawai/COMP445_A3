@@ -14,6 +14,7 @@ class UDPRequest(ABC):
         self.verbose = verbose
         self.connection = None
         self.write_file = write_file
+        self.timeout = 1
 
     @abstractmethod
     def create_request(self, path, query, host):
@@ -43,7 +44,7 @@ class UDPRequest(ABC):
             self.connection.close()
 
     def send_request(self, request):
-        udp = UdpTransporter()
+        udp = UdpTransporter(self.timeout)
         udp.init_handshake()
         #TODO: udp.send(request) doesn't actually send a response
         sent_successfully = udp.send(request)

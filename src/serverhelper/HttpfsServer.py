@@ -17,7 +17,7 @@ class HttpfsServer:
         self.port = port
         self.directory = directory
         self.clients = {}
-        self.timeout = 10
+        self.timeout = 2
     
     def start(self):
         listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -40,7 +40,7 @@ class HttpfsServer:
         p = Packet.from_bytes(data)
         peer ="%s:%s" % (p.peer_ip_addr, p.peer_port)
         if (p.packet_type == packet_types.SYN):
-            udpTransporter = UdpTransporter(conn, 'localhost', 3000, p.peer_ip_addr, p.peer_port)
+            udpTransporter = UdpTransporter(self.timeout, conn, 'localhost', 3000, p.peer_ip_addr, p.peer_port)
             udpTransporter.handshake_receive(p, sender)
             self.clients[peer] = udpTransporter
         elif p.packet_type in [packet_types.DATA, packet_types.FINAL_SEND_PACKET]:
@@ -70,4 +70,8 @@ class HttpfsServer:
                     print(http_response)
                 sent_success = udpTransporter.send(http_response)
                 if sent_success:
-                    print('successfully sent request!')
+                    print('Successfully sent request!')
+                else:
+                    print('Communication lost.')
+                    #This removes the connection so that we don't try to use it again
+                    self.clients.pop(peer)
