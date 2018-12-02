@@ -46,8 +46,16 @@ class HttpfsServer:
             if not peer in self.receiver_windows:
                 self.receiver_windows[peer] = RecWindow()
             rec_window = self.receiver_windows[peer]
-            self.receive(conn, sender, p, rec_window)
-            if (rec_window.buffer_ready_for_extraction()):
+            packet_to_send = self.receive(conn, sender, p, rec_window)
+            while not rec_window.buffer_ready_for_extraction():
+                try:
+                    response, sender = conn.recvfrom(1024)
+                    p = Packet.from_bytes(response)
+                    packet_to_send = self.receive(conn, sender, p, rec_window)
+                except socket.timeout:
+                    conn.sendto(packet_to_send.to_bytes, sender)
+                    continue
+            if rec_window.buffer_ready_for_extraction():
                 completed_packet = Packet(
                     packet_type=packet_types.FINAL_PACKET,
                     seq_num=0,
@@ -89,3 +97,4 @@ class HttpfsServer:
             payload=''
         )
         conn.sendto(packet_to_send.to_bytes(), sender)
+        return packet_to_send
