@@ -17,7 +17,7 @@ class UdpTransporter:
         self.connection = connection
         self.router_addr = router_addr
         self.router_port = router_port
-        self.peer_ip = peer_ip
+        self.peer_ip = ipaddress.ip_address(socket.gethostbyname(peer_ip))
         self.peer_port = peer_port
         self.timeout = timeout
         self.stop_all_timers = False

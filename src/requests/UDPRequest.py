@@ -10,6 +10,7 @@ class UDPRequest(ABC):
     def __init__(self, url, port, write_file, router_port, router_host, headers=[], verbose=False):
         self.url = url
         self.port = port
+        self.host = ''
         self.headers = headers
         self.verbose = verbose
         self.connection = None
@@ -29,11 +30,11 @@ class UDPRequest(ABC):
         port = self.port if ":" not in host else int(host[host.index(":") + 1:])
         self.port = port
         host = host if ":" not in url_splitted.netloc else host[0:host.index(":")]
+        self.host = host
         path = url_splitted.path
         query = url_splitted.query
         query = "" if not query else "?" + query
         request = self.create_request(path, query, host)
-
         try:
             result = self.send_request(request)
             redirection = self.process_response(result)
@@ -46,7 +47,12 @@ class UDPRequest(ABC):
             self.connection.close()
 
     def send_request(self, request):
-        udp = UdpTransporter(self.timeout)
+        udp = UdpTransporter(
+            self.timeout,
+            router_addr=self.router_host,
+            router_port=self.router_port,
+            peer_ip=self.host,
+            peer_port=self.port)
         udp.init_handshake()
         #TODO: udp.send(request) doesn't actually send a response
         sent_successfully = udp.send(request)
