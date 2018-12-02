@@ -88,9 +88,11 @@ class UdpReceiver:
             
             #check if the last packet is here
             #self.requestReady(packet, self.ack_timer)
+            
             if self.receiver_window.complete == True :
                 if(self.packet_int == self.last_packet_index):
-                    self.requestReady(self.ack_timer)
+                    req = self.requestReady(self.ack_timer)
+                    return req
            
 
     def requestReady(self,ack_timer):
@@ -99,8 +101,9 @@ class UdpReceiver:
         #ack_timer.stopTimer()
             #get full request from packets
         for p in self.receiver_window.buffer:
+            print(p.payload)
             request += p.payload.decode("utf-8")
-        self.receiver_window.complete =True
+        
         return request
         
     def sendPacket(self, p_type,p_number,sender):   

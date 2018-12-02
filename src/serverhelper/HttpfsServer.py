@@ -47,7 +47,9 @@ class HttpfsServer:
 
             udpReceiver = UdpReceiver()#self.clients[peer]
             request = udpReceiver.receive(p, sender)
+            print ("server")
             print (request)
+            print ("server")
             if (self.verbose):
                 print(request)
             request_array = request[0:request.index('\r\n\r\n')].split()
