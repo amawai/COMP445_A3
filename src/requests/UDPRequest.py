@@ -4,6 +4,7 @@ import re
 import socket
 import ipaddress
 from udp.UdpTransporter import UdpTransporter
+from udp.RecWindow import RecWindow
 
 class UDPRequest(ABC):
     def __init__(self, url, port, write_file, headers=[], verbose=False):
@@ -45,25 +46,29 @@ class UDPRequest(ABC):
         udp = UdpTransporter()
         udp.init_handshake()
         #TODO: udp.send(request) doesn't actually send a response
-        response = udp.send(request)
-        return response
-    
-
-    def process_response(self, result):
+        sent_successfully = udp.send(request)
         response = ""
-        #TODO: Uncomment once udp.send() returns a response
+        if (sent_successfully):
+            response = udp.receive_response()
+            print('Response from server: ')
+            print(response)
+            self.connection.close()
+        return response
+
+    def process_response(self, response):
+        # response = ''
         # while (len(result) > 0):
         #     response += result.decode("utf-8")
         #     #result = self.connection.recv(10000)
-        # status_code = re.findall(r"(?<=HTTP\/\d\.\d )(\d\d\d)", response)
-        # if (len(status_code) >= 1):
-        #     status_code = int(status_code[0])
-        # if (status_code == 302):
-        #     self.redirect(response)
-        #     return True
-        # else:
-        #     self.display_response(response)
-        #     return False
+        status_code = re.findall(r"(?<=HTTP\/\d\.\d )(\d\d\d)", response)
+        if (len(status_code) >= 1):
+            status_code = int(status_code[0])
+        if (status_code == 302):
+            self.redirect(response)
+            return True
+        else:
+            self.display_response(response)
+            return False
         return False
 
     def redirect(self, response):
@@ -76,6 +81,7 @@ class UDPRequest(ABC):
 
     def display_response(self, response):
         response_string = ""
+        print('\n')
         if (self.verbose):
             response_string = response
         else:

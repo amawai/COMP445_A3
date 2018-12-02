@@ -28,7 +28,7 @@ class RecWindow:
         if packet.seq_num in self.valid_sequence_nums():
             self.window[packet.seq_num] = packet
             #check if the packet is a final packet type
-            if packet.packet_type == packet_types.FINAL_PACKET:
+            if packet.packet_type == packet_types.FINAL_SEND_PACKET:
                 self.final_flag = True
         return self.check_window_for_ack_or_nak()
 
@@ -42,11 +42,10 @@ class RecWindow:
                 self.buffer.append(current_packet.payload.decode('utf-8'))
                 self.slide()
                 window_has_slid = True
-                if (current_packet.packet_type == packet_types.FINAL_PACKET):
+                if (current_packet.packet_type == packet_types.FINAL_SEND_PACKET):
                     print("all packets have been received")
                     self.buffer_ready = True
-                    return (packet_types.FINAL_PACKET, (self.current_seq_start - 1)% self.max_seq_num)
-
+                    return (packet_types.FINAL_REC_PACKET, (self.current_seq_start - 1)% self.max_seq_num)
         if (window_has_slid):
             #Send an ACK denoting the last successful frame
             return (packet_types.ACK, (self.current_seq_start - 1)% self.max_seq_num)

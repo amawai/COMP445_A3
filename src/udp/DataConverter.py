@@ -15,7 +15,7 @@ class DataConverter:
                    peer_port=peer_port,
                    payload=payload.encode("utf-8"))
             packets.append(packet)
-        packets[-1].packet_type = PacketTypes().FINAL_PACKET
+        packets[-1].packet_type = PacketTypes().FINAL_SEND_PACKET
         return packets
 
     @staticmethod

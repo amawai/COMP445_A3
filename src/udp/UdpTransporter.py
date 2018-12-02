@@ -6,6 +6,7 @@ from .Window import Window
 from .Packet import Packet
 from .DataConverter import DataConverter
 from .PacketTypes import PacketTypes
+from .RecWindow import RecWindow
 
 packet_types = PacketTypes()
 MAX_SEQUENCE_NUMBER = 10
@@ -17,7 +18,7 @@ class UdpTransporter:
         self.router_port = router_port
         self.peer_ip = peer_ip
         self.peer_port = peer_port
-        self.timeout = 10
+        self.timeout = 5
         self.stop_all_timers = False
 
     def init_handshake(self):
@@ -59,7 +60,6 @@ class UdpTransporter:
     def send(self, data):
         self.complete_sending = False
         packets = DataConverter.convert_data_to_packets(packet_types.DATA, self.peer_ip, self.peer_port, data, MAX_SEQUENCE_NUMBER)
-        print(packets)
         window = Window(packets, MAX_SEQUENCE_NUMBER)
         frame_timers = {}
         self.send_all_window_frames(window, frame_timers)
@@ -81,7 +81,7 @@ class UdpTransporter:
                     self.send_packet(window.get_window_data(p.seq_num))
                     if p.seq_num in frame_timers:
                         self.create_timer_for_packet([frame_timers[p.seq_num]])
-                elif p.packet_type == packet_types.FINAL_PACKET:
+                elif p.packet_type == packet_types.FINAL_REC_PACKET:
                     window.complete = True
                     print("All packets sent successfully")
                     break;
@@ -91,6 +91,27 @@ class UdpTransporter:
                 continue
         self.stop_all_timers = True
         return True
+
+    def receive_response(self):
+        rec_window = RecWindow()
+        while not rec_window.buffer_ready_for_extraction():
+            try:
+                response, sender = self.connection.recvfrom(1024)
+                p = Packet.from_bytes(response)
+                if (p.packet_type in [packet_types.DATA, packet_types.FINAL_SEND_PACKET]):
+                    packet_type, seq_num = rec_window.insert_packet(p)
+                    packet_to_send = Packet(
+                        packet_type=packet_type,
+                        seq_num=seq_num,
+                        peer_ip_addr=p.peer_ip_addr,
+                        peer_port=p.peer_port,
+                        payload=''
+                    )
+                    self.send_packet(packet_to_send)
+                    print('Sent ' + packet_types.get_packet_name(packet_type) + str(seq_num))
+            except socket.timeout:
+                continue
+        return rec_window.extract_buffer()
 
     def send_packet(self, packet):
         if packet != None:
@@ -123,6 +144,3 @@ class UdpTransporter:
     
     def create_timer_for_packet(self, frame_info):
         Timer(self.timeout, self.manage_timer, frame_info).start()
-
-    def close_connection():
-        self.connection.close()
