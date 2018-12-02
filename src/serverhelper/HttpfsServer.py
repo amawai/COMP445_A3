@@ -28,11 +28,11 @@ class HttpfsServer:
             while True:
                 try:
                     data, sender = listener.recvfrom(1024)
-                    self.handle_client(listener, data, sender)
+
+                    threading.Thread(target=self.handle_client, args=(listener, data, sender)).start()
+                    #self.handle_client(listener, data, sender)
                 except socket.timeout:
                     continue
-                #TODO: Multi clients
-                #threading.Thread(target=self.handle_client, args=(listener, data, sender)).start()
         finally:
             listener.close()
     
