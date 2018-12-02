@@ -12,10 +12,12 @@ REQUEST_TYPE = 0
 packet_types = PacketTypes()
 
 class HttpfsServer:
-    def __init__(self, verbose, port, directory):
+    def __init__(self, verbose, port, directory, router_port, router_host):
         self.verbose = verbose
         self.port = port
         self.directory = directory
+        self.router_port =router_port
+        self.router_host =router_host
         self.clients = {}
         self.timeout = 10
     
@@ -40,7 +42,7 @@ class HttpfsServer:
         p = Packet.from_bytes(data)
         peer ="%s:%s" % (p.peer_ip_addr, p.peer_port)
         if (p.packet_type == packet_types.SYN):
-            udpTransporter = UdpTransporter(conn, 'localhost', 3000, p.peer_ip_addr, p.peer_port)
+            udpTransporter = UdpTransporter(conn, self.router_host, self.router_port, p.peer_ip_addr, p.peer_port)
             udpTransporter.handshake_receive(p, sender)
             self.clients[peer] = udpTransporter
         elif p.packet_type in [packet_types.DATA, packet_types.FINAL_SEND_PACKET]:
@@ -48,7 +50,7 @@ class HttpfsServer:
             if peer in self.clients:
                 udpTransporter = self.clients[peer]
             else:
-                udpTransporter = UdpTransporter(conn, 'localhost', 3000, p.peer_ip_addr, p.peer_port)
+                udpTransporter = UdpTransporter(conn, self.router_host, self.router_port, p.peer_ip_addr, p.peer_port)
             request = udpTransporter.receive_response()
             if (self.verbose):
                 print(request)

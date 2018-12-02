@@ -47,7 +47,7 @@ class UdpTransporter:
                     received_syn_ack = True
             except socket.timeout:
                 keep_alive_num-=1
-                print("Timeout, resending...")
+                print("time out",keep_alive_num)
                 if self.keep_alive_counter(keep_alive_num) is False:
                     sys.exit()
                 else:
