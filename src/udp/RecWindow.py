@@ -55,7 +55,7 @@ class RecWindow:
     def slide(self):
         #Reset the window so that it can receive a new packet
         self.window[self.current_seq_start] = None
-        self.current_seq_start += 1
+        self.current_seq_start = (self.current_seq_start + 1) % self.max_seq_num
         print('sliding! new seq: ', self.current_seq_start)
     
     def valid_sequence_nums(self):

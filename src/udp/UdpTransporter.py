@@ -85,7 +85,6 @@ class UdpTransporter:
                 self.send_all_window_frames(window, frame_timers)
                 continue
         self.stop_all_timers(frame_timers)
-        self.connection.close()
         #TODO: Actual return, we simply return true for now
         return True
 
@@ -119,6 +118,8 @@ class UdpTransporter:
         frame_timers[packet.seq_num] = FrameTimer(self.timeout, self.send_packet, packet)
     
 
+    def close_connection():
+        self.connection.close()
     
 
     

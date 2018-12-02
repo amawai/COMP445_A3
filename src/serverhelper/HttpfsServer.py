@@ -42,7 +42,11 @@ class HttpfsServer:
             self.clients[peer] = udpTransporter
 
         elif p.packet_type in [packet_types.DATA, packet_types.FINAL_PACKET]:
-            udpTransporter = self.clients[peer]
+            udpTransporter = None
+            if peer in self.clients:
+                udpTransporter = self.clients[peer]
+            else:
+                udpTransporter = UdpTransporter(conn)
             if not peer in self.receiver_windows:
                 self.receiver_windows[peer] = RecWindow()
             rec_window = self.receiver_windows[peer]
@@ -53,7 +57,7 @@ class HttpfsServer:
                     p = Packet.from_bytes(response)
                     packet_to_send = self.receive(conn, sender, p, rec_window)
                 except socket.timeout:
-                    conn.sendto(packet_to_send.to_bytes, sender)
+                    conn.sendto(packet_to_send.to_bytes(), sender)
                     continue
             if rec_window.buffer_ready_for_extraction():
                 completed_packet = Packet(
