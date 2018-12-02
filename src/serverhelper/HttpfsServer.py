@@ -5,6 +5,7 @@ from .ResponseCreator import ResponseCreator
 from udp.PacketTypes import PacketTypes
 from udp.Packet import Packet
 from udp.UdpTransporter import UdpTransporter
+from udp.RecWindow import RecWindow
 import datetime
 
 REQUEST_TYPE = 0
@@ -16,6 +17,7 @@ class HttpfsServer:
         self.port = port
         self.directory = directory
         self.clients = {}
+        self.receiver_windows = {}
     
     def start(self):
         listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -39,25 +41,51 @@ class HttpfsServer:
             udpTransporter.handshake_receive(p, sender)
             self.clients[peer] = udpTransporter
 
-        elif p.packet_type in [packet_types.DATA]:
+        elif p.packet_type in [packet_types.DATA, packet_types.FINAL_PACKET]:
             udpTransporter = self.clients[peer]
-            request = udpTransporter.receive()
-            if (self.verbose):
-                print(request)
-            request_array = request[0:request.index('\r\n\r\n')].split()
-            request_body = request[request.index('\r\n\r\n'):].replace('\r\n\r\n', '')
-            request_type = request_array[REQUEST_TYPE]
-            response = ''
-            try:
-                response = {}
-                if (request_type.lower() == 'get'):
-                    response = RequestHandler(request_array, self.directory, request_body).process_get()
-                elif (request_type.lower() == 'post'):
-                    response = RequestHandler(request_array, self.directory, request_body).process_post()
-            except:
-                response = {'status': 500, 'content': ''}
-            finally:
-                http_response = ResponseCreator.create_response(response['status'], response['content'], response['mimetype'])
+            if not peer in self.receiver_windows:
+                self.receiver_windows[peer] = RecWindow()
+            rec_window = self.receiver_windows[peer]
+            self.receive(conn, sender, p, rec_window)
+            if (rec_window.buffer_ready_for_extraction()):
+                completed_packet = Packet(
+                    packet_type=packet_types.FINAL_PACKET,
+                    seq_num=0,
+                    peer_ip_addr=p.peer_ip_addr,
+                    peer_port=p.peer_port,
+                    payload=''
+                )
+                conn.sendto(completed_packet.to_bytes(), sender)
+                request = rec_window.extract_buffer()
+                #Reset the receiver
+                self.receiver_windows[peer] = RecWindow()
                 if (self.verbose):
-                    print(http_response)
-                udpTransporter.send(http_response)
+                    print(request)
+                request_array = request[0:request.index('\r\n\r\n')].split()
+                request_body = request[request.index('\r\n\r\n'):].replace('\r\n\r\n', '')
+                request_type = request_array[REQUEST_TYPE]
+                response = ''
+                try:
+                    response = {}
+                    if (request_type.lower() == 'get'):
+                        response = RequestHandler(request_array, self.directory, request_body).process_get()
+                    elif (request_type.lower() == 'post'):
+                        response = RequestHandler(request_array, self.directory, request_body).process_post()
+                except:
+                    response = {'status': 500, 'content': ''}
+                finally:
+                    http_response = ResponseCreator.create_response(response['status'], response['content'], response['mimetype'])
+                    if (self.verbose):
+                        print(http_response)
+                    udpTransporter.send(http_response)
+
+    def receive(self, conn, sender, packet, window):
+        packet_type, seq_num = window.insert_packet(packet)
+        packet_to_send = Packet(
+            packet_type=packet_type,
+            seq_num=seq_num,
+            peer_ip_addr=packet.peer_ip_addr,
+            peer_port=packet.peer_port,
+            payload=''
+        )
+        conn.sendto(packet_to_send.to_bytes(), sender)

@@ -20,4 +20,4 @@ class DataConverter:
 
     @staticmethod
     def separate_payload(payload):
-        return [payload[i:min(len(payload) - 1, i+MAX_PAYLOAD_SIZE)] for i in range(0, len(payload.encode()), MAX_PAYLOAD_SIZE)] 
+        return [payload[i:min(len(payload), i+MAX_PAYLOAD_SIZE)] for i in range(0, len(payload.encode()), MAX_PAYLOAD_SIZE)] 

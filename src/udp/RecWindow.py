@@ -3,8 +3,9 @@ from .PacketTypes import PacketTypes
 
 packet_types = PacketTypes()
 
+MAX_SEQUENCE_NUMBER = 10
 class RecWindow:
-    def __init__(self, max_seq_num):
+    def __init__(self, max_seq_num=MAX_SEQUENCE_NUMBER):
         self.buffer = []
         self.max_seq_num = max_seq_num
         self.current_seq_start = 0
@@ -15,6 +16,13 @@ class RecWindow:
     def buffer_ready_for_extraction(self):
         return self.buffer_ready
 
+    def extract_buffer(self):
+        return "".join(self.buffer)
+
+    def get_current_window(self):
+        return [window[index] for index in self.valid_sequence_nums()]
+
+    #Returns tuple of (packet_type, seq_num)
     def insert_packet(self, packet):
         print('trying to insert packet ', packet.seq_num)
         if packet.seq_num in self.valid_sequence_nums():
@@ -22,9 +30,10 @@ class RecWindow:
             #check if the packet is a final packet type
             if packet.packet_type == packet_types.FINAL_PACKET:
                 self.final_flag = True
-        self.check_if_window_can_slide()
+        return self.check_window_for_ack_or_nak()
 
-    def check_if_window_can_slide(self):
+    def check_window_for_ack_or_nak(self):
+        window_has_slid = False
         for index in self.valid_sequence_nums():
             current_packet = self.window[index]
             if index == self.current_seq_start and current_packet != None:
@@ -32,9 +41,16 @@ class RecWindow:
                 #We know that this packet is complete, add it to the buffer
                 self.buffer.append(current_packet.payload.decode('utf-8'))
                 self.slide()
+                window_has_slid = True
                 if (current_packet.packet_type == packet_types.FINAL_PACKET):
                     print("all packets have been received")
                     self.buffer_ready = True
+        if (window_has_slid):
+            #Send an ACK denoting the last successful frame
+            return (packet_types.ACK, (self.current_seq_start - 1)% self.max_seq_num)
+        else:
+            #Send NAk indicating that this current frame is missing
+            return (packet_types.NAK, self.current_seq_start)
 
     def slide(self):
         #Reset the window so that it can receive a new packet
