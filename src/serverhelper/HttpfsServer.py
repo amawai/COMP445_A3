@@ -26,8 +26,11 @@ class HttpfsServer:
             if (self.verbose):
                 print('httpfs server is listening at ', self.port)
             while True:
-                data, sender = listener.recvfrom(1024)
-                self.handle_client(listener, data, sender)
+                try:
+                    data, sender = listener.recvfrom(1024)
+                    self.handle_client(listener, data, sender)
+                except socket.timeout:
+                    continue
                 #TODO: Multi clients
                 #threading.Thread(target=self.handle_client, args=(listener, data, sender)).start()
         finally:
