@@ -12,7 +12,7 @@
 
 **Client Terminal:**
 1. `cd /path/to/COMP445_A3/src/`
-2. Run `python httpc.py -v -h "Accept: */*` http://localhost:8000
+2. Run `python httpc.py -v -h "Accept: */*" http://localhost:8000`
 
 ## Test the Basic Functionality
 ### GET / : 
