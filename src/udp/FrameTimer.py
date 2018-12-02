@@ -5,23 +5,25 @@ class FrameTimer(object):
         self._timer     = None
         self.interval   = interval
         self.function   = function
-        self.args       = args
+        self.args       = args[0]
         self.kwargs     = kwargs
         self.is_running = False
         self.start()
 
     def _run(self):
-        self.is_running = False
-        self.start()
-        self.function(self.args[0])
+        if(not self.args['acknowledged']):
+            self.is_running = False
+            self.start()
+            print('sending from timer..................')
+            self.function(self.args['packet'])
 
     def start(self):
-        if not self.is_running:
-            self._timer = Timer(self.interval, self._run)
-            self._timer.start()
-            self.is_running = True
+        if (not self.args['acknowledged']):
+            if not self.is_running:
+                self._timer = Timer(self.interval, self._run)
+                self._timer.start()
+                self.is_running = True
 
     def stop(self):
-        if self.is_running:
-            self._timer.cancel()
-            self.is_running = False
+        self._timer.cancel()
+        self.is_running = False

@@ -45,6 +45,8 @@ class RecWindow:
                 if (current_packet.packet_type == packet_types.FINAL_PACKET):
                     print("all packets have been received")
                     self.buffer_ready = True
+                    return (packet_types.FINAL_PACKET, (self.current_seq_start - 1)% self.max_seq_num)
+
         if (window_has_slid):
             #Send an ACK denoting the last successful frame
             return (packet_types.ACK, (self.current_seq_start - 1)% self.max_seq_num)
