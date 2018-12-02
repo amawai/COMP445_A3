@@ -101,7 +101,7 @@ class UdpTransporter:
                 seq_num = p.seq_num
                 if p.seq_num in frame_timers:
                     frame_timers[seq_num].stop()
-                frame_timers[seq_num] = FrameTimer(self.timeout, self.router_addr, self.router_port, p, self.connection)
+                frame_timers[seq_num] = FrameTimer(self.timeout, self.send_packet, p)
                 self.send_packet(p)
 
     def stop_all_timers(self, frame_timers):
@@ -116,7 +116,7 @@ class UdpTransporter:
     def reset_timer(self, frame_timers, packet):
         if packet in frame_timers:
             frame_timers[packet].stop()
-        frame_timers[packet.seq_num] = FrameTimer(self.timeout, self.router_addr, self.router_port, packet, self.connection)
+        frame_timers[packet.seq_num] = FrameTimer(self.timeout, self.send_packet, packet)
     
 
     
