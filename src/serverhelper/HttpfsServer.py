@@ -16,8 +16,8 @@ class HttpfsServer:
         self.verbose = verbose
         self.port = port
         self.directory = directory
-        self.router_port =router_port
-        self.router_host =router_host
+        self.router_port = router_port
+        self.router_host = router_host
         self.clients = {}
         self.timeout = 2
     
@@ -50,7 +50,8 @@ class HttpfsServer:
             if peer in self.clients:
                 udpTransporter = self.clients[peer]
             else:
-                udpTransporter = UdpTransporter(conn, self.router_host, self.router_port, p.peer_ip_addr, p.peer_port)
+                udpTransporter = UdpTransporter(self.timeout, conn, self.router_host, self.router_port, p.peer_ip_addr, p.peer_port)
+                self.clients[peer] = udpTransporter
             request = udpTransporter.receive_response()
             if (self.verbose):
                 print(request)
@@ -76,4 +77,5 @@ class HttpfsServer:
                 else:
                     print('Communication lost.')
                     #This removes the connection so that we don't try to use it again
-                    self.clients.pop(peer)
+                    if peer in self.clients:
+                        self.clients.pop(peer)
