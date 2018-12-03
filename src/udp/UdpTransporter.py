@@ -17,11 +17,11 @@ class UdpTransporter:
         self.connection = connection
         self.router_addr = router_addr
         self.router_port = router_port
-        self.peer_ip = peer_ip
+        self.peer_ip = ipaddress.ip_address(socket.gethostbyname(peer_ip)) if peer_ip == "localhost" else peer_ip
         self.peer_port = peer_port
         self.timeout = timeout
         self.stop_all_timers = False
-        self.keep_alive_num = 100
+        self.keep_alive_num = 3
 
     def init_handshake(self):
         initial_seq_num = random.randrange(0, 2**31)
@@ -129,7 +129,6 @@ class UdpTransporter:
                 timeout_count += 1
                 print("Timeout, resending...")
                 if self.keep_alive_counter(timeout_count) is False:
-                    self.connection.close()
                     sys.exit()
                 else:
                     continue
