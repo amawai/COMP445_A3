@@ -21,7 +21,7 @@ class UdpTransporter:
         self.peer_port = peer_port
         self.timeout = timeout
         self.stop_all_timers = False
-        self.keep_alive_num = 3
+        self.keep_alive_num = 25
 
     def init_handshake(self):
         initial_seq_num = random.randrange(0, 2**31)
@@ -75,35 +75,39 @@ class UdpTransporter:
         timeout_count = 0
         while(not window.complete or no_response):
             try:
-                response, sender = self.connection.recvfrom(1024)
-                p = Packet.from_bytes(response)
-                print('RECEIVED ' + packet_types.get_packet_name(p.packet_type) + str(p.seq_num))
-                if p.packet_type == packet_types.ACK:
-                    completed_frames = window.slide_window(p.seq_num)
-                    print('THESE WERE COMPLETED')
-                    print(completed_frames)
-                    self.stop_timer(frame_timers, completed_frames)
-                    self.send_all_window_frames(window, frame_timers)
-                elif p.packet_type == packet_types.NAK:
-                    completed_frames = window.slide_window((p.seq_num - 1) % MAX_SEQUENCE_NUMBER)
-                    self.stop_timer(frame_timers, completed_frames)
-                    #resend the packet with the corresponding sequence number
-                    self.send_packet(window.get_window_data(p.seq_num))
-                    if p.seq_num in frame_timers:
-                        self.create_timer_for_packet([frame_timers[p.seq_num]])
-                elif p.packet_type == packet_types.FINAL_REC_PACKET:
-                    window.complete = True
-                    print("All packets sent successfully")
-                    break;
-            except socket.timeout:
-                timeout_count += 1
-                print("Timeout, resending...")
-                self.send_all_window_frames(window, frame_timers)
-                if self.keep_alive_counter(timeout_count) is False:
-                    no_response = True
+                if self.connection == None:
                     break
                 else:
-                    continue
+                    response, sender = self.connection.recvfrom(1024)
+                    p = Packet.from_bytes(response)
+                    print('RECEIVED ' + packet_types.get_packet_name(p.packet_type) + str(p.seq_num))
+                    if p.packet_type == packet_types.ACK:
+                        completed_frames = window.slide_window(p.seq_num)
+                        #print('THESE WERE COMPLETED')
+                        #print(completed_frames)
+                        self.stop_timer(frame_timers, completed_frames)
+                        self.send_all_window_frames(window, frame_timers)
+                    elif p.packet_type == packet_types.NAK:
+                        completed_frames = window.slide_window((p.seq_num - 1) % MAX_SEQUENCE_NUMBER)
+                        self.stop_timer(frame_timers, completed_frames)
+                        #resend the packet with the corresponding sequence number
+                        self.send_packet(window.get_window_data(p.seq_num))
+                        if p.seq_num in frame_timers:
+                            self.create_timer_for_packet([frame_timers[p.seq_num]])
+                    elif p.packet_type == packet_types.FINAL_REC_PACKET:
+                        window.complete = True
+                        print("All packets sent successfully")
+                        break;
+            except socket.timeout:
+                if not no_response:
+                    timeout_count += 1
+                    print("Sending timeout, resending...")
+                    self.send_all_window_frames(window, frame_timers)
+                    if self.keep_alive_counter(timeout_count) is False:
+                        no_response = True
+                        break
+                    else:
+                        continue
         self.stop_all_timers = True
         return False if no_response else True
 
@@ -112,9 +116,12 @@ class UdpTransporter:
         timeout_count = 0
         while not rec_window.buffer_ready_for_extraction():
             try:
+                if (self.connection == None):
+                    break
                 response, sender = self.connection.recvfrom(1024)
                 p = Packet.from_bytes(response)
                 if (p.packet_type in [packet_types.DATA, packet_types.FINAL_SEND_PACKET]):
+                    print('RECEIVED ' + packet_types.get_packet_name(p.packet_type) + str(p.seq_num))
                     packet_type, seq_num = rec_window.insert_packet(p)
                     packet_to_send = Packet(
                         packet_type=packet_type,
@@ -124,10 +131,9 @@ class UdpTransporter:
                         payload=''
                     )
                     self.send_packet(packet_to_send)
-                    print('Sent ' + packet_types.get_packet_name(packet_type) + str(seq_num))
             except socket.timeout:
                 timeout_count += 1
-                print("Timeout, resending...")
+                print("Receive timeout, resending...")
                 if self.keep_alive_counter(timeout_count) is False:
                     sys.exit()
                 else:
@@ -136,16 +142,16 @@ class UdpTransporter:
 
     def send_packet(self, packet):
         if packet != None:
-            print('SENDING packet#', packet.seq_num)
-            self.connection.sendto(packet.to_bytes(), (self.router_addr, self.router_port))
-            self.connection.settimeout(self.timeout)
+            print('SENDING ' + packet_types.get_packet_name(packet.packet_type) + '#' + str(packet.seq_num))
+            if self.connection != None:
+                self.connection.sendto(packet.to_bytes(), (self.router_addr, self.router_port))
+                self.connection.settimeout(self.timeout)
 
     def send_all_window_frames(self, window, frame_timers):
         for p in window.get_all_window_data():
             if p is not None:
                 seq_num = p.seq_num
                 frame_timers[seq_num] = {"packet": p, "acknowledged": False}
-                print('create timer for ', seq_num)
                 self.create_timer_for_packet([frame_timers[seq_num]])
                 self.send_packet(p)
 
@@ -153,7 +159,6 @@ class UdpTransporter:
         for frame in frames:
             if frame in frame_timers:
                 frame_timers[frame]['acknowledged'] = True
-                print('stopping frame ', frame)
     
     def manage_timer(self, frame_info):
         if not self.stop_all_timers:
@@ -167,5 +172,5 @@ class UdpTransporter:
     
     def keep_alive_counter(self, timeout_count):
         if timeout_count == self.keep_alive_num:
-            print("No response from server. Quitting...")
+            print("No response. Quitting...")
             return False

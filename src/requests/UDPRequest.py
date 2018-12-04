@@ -59,8 +59,6 @@ class UDPRequest(ABC):
         response = ""
         if (sent_successfully):
             response = udp.receive_response()
-            print('Response from server: ')
-            print(response)
             self.connection.close()
         return response
 

@@ -26,6 +26,8 @@ class RecWindow:
     def insert_packet(self, packet):
         print('trying to insert packet ', packet.seq_num)
         if packet.seq_num in self.valid_sequence_nums():
+            print('valid seq nums are ')
+            print(self.valid_sequence_nums())
             self.window[packet.seq_num] = packet
             #check if the packet is a final packet type
             if packet.packet_type == packet_types.FINAL_SEND_PACKET:
@@ -37,7 +39,7 @@ class RecWindow:
         for index in self.valid_sequence_nums():
             current_packet = self.window[index]
             if index == self.current_seq_start and current_packet != None:
-                print('current sequence number is ', self.current_seq_start)
+                #print('current sequence number is ', self.current_seq_start)
                 #We know that this packet is complete, add it to the buffer
                 self.buffer.append(current_packet.payload.decode('utf-8'))
                 self.slide()
@@ -51,13 +53,14 @@ class RecWindow:
             return (packet_types.ACK, (self.current_seq_start - 1)% self.max_seq_num)
         else:
             #Send NAk indicating that this current frame is missing
+            #print('sending nak with current seq start ', self.current_seq_start)
             return (packet_types.NAK, self.current_seq_start)
 
     def slide(self):
         #Reset the window so that it can receive a new packet
         self.window[self.current_seq_start] = None
         self.current_seq_start = (self.current_seq_start + 1) % self.max_seq_num
-        print('sliding! new seq: ', self.current_seq_start)
+        #print('sliding! new seq: ', self.current_seq_start)
     
     def valid_sequence_nums(self):
         return [num % self.max_seq_num for num in range(self.current_seq_start, self.current_seq_start + self.window_size)]
